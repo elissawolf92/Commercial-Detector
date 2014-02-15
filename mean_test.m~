@@ -1,0 +1,67 @@
+
+%% Initialization
+SamplesPerFrame = 2048;
+FReader = dsp.AudioFileReader('clips/ad1.wav','SamplesPerFrame',SamplesPerFrame);
+Fs = FReader.SampleRate;
+
+TimeScope = dsp.TimeScope('SampleRate',Fs,'BufferLength',16*Fs,...
+	 'TimeSpan',300,'YLimits',[-0.5 0.5],'ShowGrid',true);
+
+
+
+Player = dsp.AudioPlayer('SampleRate',Fs);
+
+FWriter = dsp.AudioFileWriter('SampleRate',Fs,...
+	 'FileFormat','M4A','Filename', 'output.M4A');
+ 
+%Meaner = dsp.Mean('RunningMean', true);
+Meaner = dsp.Mean();
+
+%% Stream
+tic;
+i=0;
+in_commercial = false;
+time_last_toggle = 0;
+
+while toc < 300
+	 % Read frame from file
+	 audioIn = step(FReader);
+     %audioIn = sum(audioIn,2);
+     
+     % Trivial algorithm, scale input audio
+	 audioOut = 0.8*audioIn;
+
+	 % View audio waveform
+	 step(TimeScope,[audioIn,audioOut]);
+
+	 % Play resulting audio, if we're not in a commercial
+     if (in_commercial==false)
+        step(Player,audioOut);
+     else
+         step(Player, [0 0]);
+     end
+
+	 % Write resulting audio
+	 %step(FWriter,audioOut);
+     
+     % Calculate running mean
+     m = step(Meaner, audioIn);
+     m = sum(m,2);
+     % check for silence
+     if (m==0)
+         % if we've found a silence, see if it's been enough time
+         if (toc - time_last_toggle > 30)
+         in_commercial = ~in_commercial
+         time_last_toggle = toc;
+         end
+     end
+
+end
+
+%% Terminate
+release(FReader)
+s = [];
+release(TimeScope)
+s.TimeScope = TimeScope;
+release(Player)
+release(FWriter)
