@@ -1,5 +1,9 @@
 
 %% Initialization
+% serial
+s = serial('/dev/tty.usbmodem1421');
+fopen(s);
+%
 SamplesPerFrame = 2048;
 %FReader = dsp.AudioFileReader('clips/ad1.wav','SamplesPerFrame',SamplesPerFrame, ...
 %    'PlayCount',1);
@@ -72,6 +76,7 @@ while ~isDone(FReader)
             in_commercial = false;
             last_toggle = toc;
             [status, result] = system('osascript -e "set Volume 10"');
+            fprintf(s,'1');
             'Max comm length exceeded - switching to show'
         end
     end
@@ -98,6 +103,7 @@ while ~isDone(FReader)
         if (~in_commercial && (toc - last_toggle > max_comm_block_length)) 
             in_commercial = true;
             [~, ~] = system('osascript -e "set Volume 1"');
+            fprintf(s,'1');
             last_toggle = toc;
             % last_silence = toc;
             'Detected show->commercial transition'
@@ -109,6 +115,7 @@ while ~isDone(FReader)
         if (in_commercial && (toc-last_toggle > min_comm_block_length))
             in_commercial = false;
             [~, ~] = system('osascript -e "set Volume 10"');
+            fprintf(s,'1');
             last_toggle = toc;
             'Detected commercial->show transition'
         end
@@ -122,6 +129,7 @@ while ~isDone(FReader)
     end
     
     % Check that we're not arguing with the user
+    %{
     [status, result] = system('osascript -e "output volume of (get volume settings)"');
     result = str2num(result(127:129));
     % Result is 14 when after calling 'set Volume 1'.  idk why
@@ -130,6 +138,7 @@ while ~isDone(FReader)
        in_commercial = false;
        'User changed volume - change in_commercial to false'
     end
+    %}
     
 end
 
